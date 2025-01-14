@@ -1,0 +1,45 @@
+TO GET A FINAL CSV FILE. IN IT YOU WILL UPLAOD A CSV FILE HAVING IMAGE IDS AND THEIR PREDICTIONS(YOU HAVE TO MANUALLY COLLECT DATA FROM ALL CSVS DATA YOU GOT IN EACH RUN)
+IN EACH RUN AND IT WILL RETURN A CSV FILE HAVING THE PREDICTION THAT CAME MOST
+
+import pandas as pd
+from google.colab import files
+import io
+
+# Upload the CSV file
+uploaded = files.upload()
+
+# Get the filename from the uploaded files
+file_name = next(iter(uploaded))
+
+# Read the CSV file into a pandas DataFrame
+try:
+    df = pd.read_csv(io.BytesIO(uploaded[file_name]))
+except pd.errors.ParserError:
+    print("Error: Invalid CSV file format. Please upload a valid CSV file.")
+    exit()
+
+# Check if the required columns exist
+required_cols = ['image_id', 'label_1', 'label_2', 'label_3', 'label_4']
+if not all(col in df.columns for col in required_cols):
+    print("Error: The CSV file must contain columns: image_id, label_1, label_2, label_3, label_4")
+    exit()
+
+# Function to count label occurrences and find the most frequent label
+def analyze_labels(row):
+    labels = [row['label_1'], row['label_2'], row['label_3'], row['label_4']]
+    label_counts = {}
+    for label in labels:
+        label_counts[label] = label_counts.get(label, 0) + 1
+
+    total_count = sum(label_counts.values())
+    most_frequent_label = max(label_counts, key=label_counts.get, default="None") # Handle empty label lists
+
+    return total_count, most_frequent_label
+
+
+# Apply the function to each row
+df[['total_count', 'most_frequent_label']] = df.apply(analyze_labels, axis=1, result_type='expand')
+
+# Save the updated DataFrame to a new CSV file
+output_filename = 'output.csv'
+df.to_csv(output_filename, index=False)
